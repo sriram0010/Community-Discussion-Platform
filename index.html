@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HostelCare - Resident Issue Management System</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              200: '#c7d2fe',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              800: '#3730a3',
+              900: '#312e81',
+            },
+            hostel: {
+              amethyst: '#8b5cf6',
+              amber: '#f59e0b',
+              sapphire: '#0284c7',
+              jasper: '#ef4444'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen font-sans flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+
+  <!-- TOP NAVIGATION BAR -->
+  <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm transition-all">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-200">
+          <i class="fa-solid fa-hotel text-lg"></i>
+        </div>
+        <div>
+          <span class="font-extrabold text-xl tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">HostelCare</span>
+          <span class="hidden sm:inline-block text-xs font-semibold px-2 py-0.5 ml-2 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-200">Campus Resident Portal</span>
+        </div>
+      </div>
+
+      <!-- Center / DB Status Indicator -->
+      <div class="flex items-center">
+        <button onclick="openDbConfigModal()" id="dbStatusBadge" class="flex items-center space-x-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 transition" title="Click to view/change MySQL database connection">
+          <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse" id="dbStatusDot"></span>
+          <i class="fa-solid fa-database text-xs text-indigo-600"></i>
+          <span id="dbStatusText">MySQL Checking...</span>
+        </button>
+      </div>
+
+      <!-- User Nav Actions (When Logged In) -->
+      <div id="navUserSection" class="hidden flex items-center space-x-3">
+        <div class="flex items-center space-x-2 text-sm bg-slate-100 py-1.5 px-3 rounded-full border border-slate-200">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span id="navUserBadge" class="font-medium text-slate-700 truncate max-w-[150px] sm:max-w-[200px]">Student</span>
+          <span id="navRoleTag" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 uppercase tracking-wider">Student</span>
+        </div>
+
+        <!-- Outbox email preview trigger -->
+        <button id="btnViewEmails" onclick="openEmailOutboxModal()" class="relative p-2 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-xl transition duration-150" title="Sent Notifications Log">
+          <i class="fa-solid fa-envelope text-lg"></i>
+          <span id="emailBadgeCount" class="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white">0</span>
+        </button>
+
+        <button onclick="handleLogout()" class="inline-flex items-center space-x-2 text-sm font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-3.5 py-1.5 rounded-xl transition">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          <span class="hidden sm:inline">Logout</span>
+        </button>
+      </div>
+
+      <!-- Guest Quick Buttons (When logged out) -->
+      <div id="navGuestSection" class="flex items-center space-x-2">
+        <span class="text-xs text-slate-500 hidden md:inline">Quick Test:</span>
+        <button onclick="quickLogin('student')" class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold px-2.5 py-1.5 rounded-lg border border-indigo-200 transition">
+          <i class="fa-solid fa-user-graduate mr-1"></i> Student
+        </button>
+        <button onclick="quickLogin('admin')" class="text-xs bg-purple-50 hover:bg-purple-100 text-purple-700 font-semibold px-2.5 py-1.5 rounded-lg border border-purple-200 transition">
+          <i class="fa-solid fa-shield-halved mr-1"></i> Admin
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- ============================================== -->
+    <!-- VIEW 1: AUTHENTICATION (LOGIN / REGISTER)       -->
+    <!-- ============================================== -->
+    <section id="authView" class="max-w-2xl mx-auto my-4 transition-all">
+      <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-100 overflow-hidden">
+        
+        <!-- Header Banner -->
+        <div class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-violet-800 p-8 text-white text-center relative overflow-hidden">
+          <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+          <div class="absolute -left-10 -top-10 w-40 h-40 bg-purple-500/20 rounded-full blur-2xl pointer-events-none"></div>
+          <div class="inline-flex p-3 rounded-2xl bg-white/10 backdrop-blur-md mb-3 border border-white/20 shadow-inner">
+            <i class="fa-solid fa-screwdriver-wrench text-2xl text-amber-300"></i>
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Hostel Issue Resolution Hub</h1>
+          <p class="text-indigo-100 text-sm mt-1 max-w-md mx-auto">Report maintenance issues, monitor live resolution duration, and get instant updates.</p>
+          
+          <!-- Hostels Badge Strip -->
+          <div class="flex flex-wrap items-center justify-center gap-2 mt-4 text-xs font-semibold">
+            <span class="px-2.5 py-1 rounded-full bg-violet-500/30 border border-violet-300/40 text-violet-100"><i class="fa-solid fa-gem mr-1"></i>Amethyst (@at)</span>
+            <span class="px-2.5 py-1 rounded-full bg-amber-500/30 border border-amber-300/40 text-amber-100"><i class="fa-solid fa-sun mr-1"></i>Amber (@ab)</span>
+            <span class="px-2.5 py-1 rounded-full bg-sky-500/30 border border-sky-300/40 text-sky-100"><i class="fa-solid fa-water mr-1"></i>Sapphire (@sp)</span>
+            <span class="px-2.5 py-1 rounded-full bg-rose-500/30 border border-rose-300/40 text-rose-100"><i class="fa-solid fa-fire mr-1"></i>Jasper (@js)</span>
+          </div>
+        </div>
+
+        <!-- Auth Tabs Toggle -->
+        <div class="flex border-b border-slate-200 bg-slate-50/50 p-2">
+          <button id="tabLoginBtn" onclick="switchAuthTab('login')" class="flex-1 py-3 text-center text-sm font-bold text-indigo-600 bg-white rounded-2xl shadow-sm transition">
+            <i class="fa-solid fa-right-to-bracket mr-2"></i>Sign In
+          </button>
+          <button id="tabRegisterBtn" onclick="switchAuthTab('register')" class="flex-1 py-3 text-center text-sm font-semibold text-slate-500 hover:text-slate-800 rounded-2xl transition">
+            <i class="fa-solid fa-user-plus mr-2"></i>Create Student Account
+          </button>
+        </div>
+
+        <!-- TAB CONTENT: LOGIN -->
+        <div id="loginTabContent" class="p-6 sm:p-8">
+          <form id="loginForm" onsubmit="handleLoginSubmit(event)" class="space-y-5">
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Username or Email</label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <i class="fa-solid fa-at"></i>
+                </span>
+                <input type="text" id="loginIdentifier" required placeholder="e.g. 21BCE1042@at or admin@hostel.edu"
+                  class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition" />
+              </div>
+              <p class="text-xs text-slate-400 mt-1">Students log in with their generated username format (e.g. <span class="font-mono text-indigo-600 font-semibold">reg_no@at</span> for Amethyst).</p>
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600">Password</label>
+                <span class="text-xs text-indigo-600 hover:underline cursor-pointer" onclick="alert('For demo accounts, use password: password123')">Forgot password?</span>
+              </div>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <i class="fa-solid fa-lock"></i>
+                </span>
+                <input type="password" id="loginPassword" required placeholder="••••••••"
+                  class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition" />
+              </div>
+            </div>
+
+            <div id="loginErrorMsg" class="hidden p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold"></div>
+
+            <button type="submit" class="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold text-sm rounded-xl shadow-lg shadow-indigo-200 hover:shadow-indigo-300 transition duration-150 flex items-center justify-center space-x-2">
+              <span>Sign In to Portal</span>
+              <i class="fa-solid fa-arrow-right text-xs"></i>
+            </button>
+          </form>
+
+          <!-- Quick Test Credentials Box -->
+          <div class="mt-6 pt-6 border-t border-slate-100">
+            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Demo Logins (Click to Auto-fill)</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              <button type="button" onclick="fillTestLogin('21BCE1042@at', 'password123')" class="text-left p-2.5 rounded-lg border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 transition">
+                <div class="font-bold text-slate-700 flex items-center justify-between">
+                  <span>Aarav Sharma</span>
+                  <span class="px-1.5 py-0.5 rounded text-[10px] bg-purple-100 text-purple-700 font-bold">Amethyst</span>
+                </div>
+                <div class="text-slate-500 font-mono text-[11px] mt-0.5">21BCE1042@at</div>
+              </button>
+              <button type="button" onclick="fillTestLogin('admin@hostel.edu', 'admin123')" class="text-left p-2.5 rounded-lg border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 transition">
+                <div class="font-bold text-slate-700 flex items-center justify-between">
+                  <span>Chief Warden</span>
+                  <span class="px-1.5 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-700 font-bold">Admin</span>
+                </div>
+                <div class="text-slate-500 font-mono text-[11px] mt-0.5">admin@hostel.edu</div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB CONTENT: REGISTER -->
+        <div id="registerTabContent" class="p-6 sm:p-8 hidden">
+          <form id="registerForm" onsubmit="handleRegisterSubmit(event)" class="space-y-4">
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- Full Name -->
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Full Name *</label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-user"></i>
+                  </span>
+                  <input type="text" id="regName" required placeholder="e.g. Rahul Verma"
+                    class="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition" />
+                </div>
+              </div>
+
+              <!-- Registration Number -->
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Registration No. *</label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-id-card"></i>
+                  </span>
+                  <input type="text" id="regNo" required placeholder="e.g. 22BCE1530" oninput="updateCalculatedUsername()"
+                    class="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Email & Location -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Email Address *</label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-envelope"></i>
+                  </span>
+                  <input type="email" id="regEmail" required placeholder="student@example.edu"
+                    class="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition" />
+                </div>
+                <p class="text-[11px] text-slate-400 mt-1">Resolution notification emails will be sent here.</p>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Campus Location / Block *</label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-location-dot"></i>
+                  </span>
+                  <input type="text" id="regLocation" required placeholder="e.g. North Campus, Block B"
+                    class="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Hostel Name & Room No -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Hostel Name *</label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-building"></i>
+                  </span>
+                  <select id="regHostel" required onchange="updateCalculatedUsername()"
+                    class="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                    <option value="Amethyst">Amethyst (Suffix: @at)</option>
+                    <option value="Amber">Amber (Suffix: @ab)</option>
+                    <option value="Sapphire">Sapphire (Suffix: @sp)</option>
+                    <option value="Jasper">Jasper (Suffix: @js)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Room Number *</label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-door-open"></i>
+                  </span>
+                  <input type="text" id="regRoomNo" required placeholder="e.g. 304-B"
+                    class="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Calculated Username Preview Callout -->
+            <div class="p-3 bg-indigo-50/70 border border-indigo-200 rounded-xl flex items-center justify-between">
+              <div>
+                <div class="text-[11px] font-bold text-indigo-900 uppercase tracking-wide">Your Generated Student Username:</div>
+                <div id="usernamePreview" class="text-sm font-extrabold text-indigo-700 font-mono tracking-tight">---@at</div>
+              </div>
+              <span class="text-xs text-indigo-600 bg-white px-2 py-1 rounded-md border border-indigo-200 shadow-xs font-medium">
+                Auto-assigned for login
+              </span>
+            </div>
+
+            <!-- Password -->
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Create Password *</label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <i class="fa-solid fa-lock"></i>
+                </span>
+                <input type="password" id="regPassword" required minlength="4" placeholder="Minimum 4 characters"
+                  class="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition" />
+              </div>
+            </div>
+
+            <div id="registerErrorMsg" class="hidden p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold"></div>
+
+            <button type="submit" class="w-full py-3.5 px-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-indigo-200 transition duration-150 flex items-center justify-center space-x-2">
+              <span>Complete Registration</span>
+              <i class="fa-solid fa-check text-xs"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- VIEW 2: STUDENT DASHBOARD                      -->
+    <!-- ============================================== -->
+    <section id="studentDashboard" class="hidden space-y-8 transition-all">
+      
+      <!-- Welcome Hero Banner -->
+      <div class="bg-gradient-to-br from-indigo-700 via-indigo-800 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+        <div class="absolute -right-16 -top-16 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute right-32 bottom-0 w-48 h-48 bg-purple-500/20 rounded-full blur-2xl pointer-events-none"></div>
+
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+            <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-semibold text-indigo-200 mb-3">
+              <i class="fa-solid fa-shield-cat"></i>
+              <span>Resident Self-Service Dashboard</span>
+            </div>
+            <h2 class="text-2xl sm:text-4xl font-extrabold tracking-tight">
+              Welcome back, <span id="studentWelcomeName" class="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-pink-300 to-indigo-200">Resident</span>! 👋
+            </h2>
+            <p class="text-slate-300 text-sm mt-1">Here is the real-time status of your room maintenance requests.</p>
+
+            <!-- Resident Details Pill Box -->
+            <div class="flex flex-wrap items-center gap-3 mt-4 text-xs">
+              <div class="bg-white/10 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-white/10 flex items-center space-x-2">
+                <i class="fa-solid fa-door-closed text-amber-300"></i>
+                <span>Room: <strong id="studentWelcomeRoom" class="text-white">---</strong></span>
+              </div>
+              <div class="bg-white/10 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-white/10 flex items-center space-x-2">
+                <i class="fa-solid fa-building text-violet-300"></i>
+                <span>Hostel: <strong id="studentWelcomeHostel" class="text-white">---</strong></span>
+              </div>
+              <div class="bg-white/10 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-white/10 flex items-center space-x-2">
+                <i class="fa-solid fa-id-badge text-sky-300"></i>
+                <span>Reg No: <strong id="studentWelcomeReg" class="font-mono text-white">---</strong></span>
+              </div>
+              <div class="bg-white/10 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-white/10 flex items-center space-x-2">
+                <i class="fa-solid fa-at text-emerald-300"></i>
+                <span>Username: <strong id="studentWelcomeUsername" class="font-mono text-white">---</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Add Issue Primary Button -->
+          <div class="flex-shrink-0">
+            <button onclick="openNewIssueModal()" class="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-900 font-extrabold px-6 py-3.5 rounded-2xl shadow-lg shadow-amber-500/20 hover:scale-[1.02] active:scale-[0.98] transition">
+              <i class="fa-solid fa-circle-plus text-lg"></i>
+              <span>Raise New Issue</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Metrics Strip -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
+          <div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl">
+            <i class="fa-solid fa-clipboard-list"></i>
+          </div>
+          <div>
+            <div id="statStudentTotal" class="text-2xl font-black text-slate-800">0</div>
+            <div class="text-xs font-semibold text-slate-500">Total Raised</div>
+          </div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
+          <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+          </div>
+          <div>
+            <div id="statStudentActive" class="text-2xl font-black text-amber-600">0</div>
+            <div class="text-xs font-semibold text-slate-500">Active Issues</div>
+          </div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
+          <div class="w-12 h-12 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center text-xl">
+            <i class="fa-solid fa-screwdriver-wrench"></i>
+          </div>
+          <div>
+            <div id="statStudentInProgress" class="text-2xl font-black text-sky-600">0</div>
+            <div class="text-xs font-semibold text-slate-500">In Progress</div>
+          </div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
+          <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+          <div>
+            <div id="statStudentResolved" class="text-2xl font-black text-emerald-600">0</div>
+            <div class="text-xs font-semibold text-slate-500">Resolved</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION: CURRENT ACTIVE ISSUES -->
+      <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-slate-100 gap-4">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="w-3 h-3 rounded-full bg-rose-500 animate-ping"></span>
+              <h3 class="text-xl font-bold text-slate-800">Current Unresolved Issues</h3>
+            </div>
+            <p class="text-slate-500 text-xs mt-1">Live tracking of ongoing complaints with duration counter.</p>
+          </div>
+          <button onclick="openNewIssueModal()" class="text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-xl transition inline-flex items-center self-start sm:self-auto">
+            <i class="fa-solid fa-plus mr-1.5"></i> Raise Issue
+          </button>
+        </div>
+
+        <!-- Issue Cards Container -->
+        <div id="studentActiveIssuesList" class="divide-y divide-slate-100 mt-2">
+          <!-- Dynamic cards injected via JS -->
+        </div>
+
+        <!-- Empty State for Active Issues -->
+        <div id="studentActiveEmptyState" class="hidden text-center py-12">
+          <div class="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
+            <i class="fa-regular fa-circle-check"></i>
+          </div>
+          <h4 class="font-bold text-slate-700">No unresolved issues!</h4>
+          <p class="text-slate-400 text-xs mt-1">Your room currently has zero pending maintenance requests.</p>
+        </div>
+      </div>
+
+      <!-- SECTION: HISTORY OF RESOLVED ISSUES -->
+      <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm">
+        <div class="flex items-center justify-between pb-6 border-b border-slate-100">
+          <div>
+            <h3 class="text-xl font-bold text-slate-800 flex items-center space-x-2">
+              <i class="fa-solid fa-clock-rotate-left text-slate-400 text-base"></i>
+              <span>History of Issues</span>
+            </h3>
+            <p class="text-slate-500 text-xs mt-1">Archive of previously resolved complaints and confirmation emails.</p>
+          </div>
+        </div>
+
+        <!-- History list container -->
+        <div id="studentHistoryIssuesList" class="divide-y divide-slate-100 mt-2">
+          <!-- Dynamic items injected via JS -->
+        </div>
+
+        <!-- Empty State for History -->
+        <div id="studentHistoryEmptyState" class="hidden text-center py-10">
+          <div class="w-12 h-12 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-2 text-lg">
+            <i class="fa-solid fa-inbox"></i>
+          </div>
+          <p class="text-slate-500 text-xs">No past resolved issues recorded yet.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- VIEW 3: HOSTEL ADMINISTRATOR DASHBOARD         -->
+    <!-- ============================================== -->
+    <section id="adminDashboard" class="hidden space-y-8 transition-all">
+      
+      <!-- Admin Top Banner -->
+      <div class="bg-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+            <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 text-xs font-semibold mb-2">
+              <i class="fa-solid fa-shield-halved"></i>
+              <span>Hostel Warden & Facilities Admin Console</span>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Hostel Maintenance Command Center</h2>
+            <p class="text-slate-400 text-sm mt-1">Oversee Amethyst, Amber, Sapphire, and Jasper hostel facilities, resolve issues, and notify students.</p>
+          </div>
+
+          <!-- Quick Stats Pills -->
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="bg-slate-800 border border-slate-700 px-4 py-2.5 rounded-2xl text-center">
+              <div id="adminStatPending" class="text-xl font-black text-rose-400">0</div>
+              <div class="text-[11px] font-semibold text-slate-400 uppercase">Pending</div>
+            </div>
+            <div class="bg-slate-800 border border-slate-700 px-4 py-2.5 rounded-2xl text-center">
+              <div id="adminStatInProgress" class="text-xl font-black text-amber-400">0</div>
+              <div class="text-[11px] font-semibold text-slate-400 uppercase">In Progress</div>
+            </div>
+            <div class="bg-slate-800 border border-slate-700 px-4 py-2.5 rounded-2xl text-center">
+              <div id="adminStatResolved" class="text-xl font-black text-emerald-400">0</div>
+              <div class="text-[11px] font-semibold text-slate-400 uppercase">Resolved</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ANALYTICS SECTION: GRAPHS & CHARTS -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Chart 1: Issues across Hostels -->
+        <div class="lg:col-span-2 bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="font-extrabold text-slate-800 text-base flex items-center space-x-2">
+                <i class="fa-solid fa-chart-column text-indigo-600"></i>
+                <span>Issue Distribution Across Hostels</span>
+              </h3>
+              <p class="text-xs text-slate-500">Breakdown of pending vs resolved issues across Amethyst, Amber, Sapphire, and Jasper.</p>
+            </div>
+            <span class="text-[11px] bg-slate-100 text-slate-600 font-semibold px-2.5 py-1 rounded-lg">Real-time</span>
+          </div>
+          <div class="relative h-64 sm:h-72 w-full">
+            <canvas id="hostelsChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 2: Issues by Category Breakdown -->
+        <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="font-extrabold text-slate-800 text-base flex items-center space-x-2">
+                <i class="fa-solid fa-chart-pie text-violet-600"></i>
+                <span>Problem Categories</span>
+              </h3>
+              <p class="text-xs text-slate-500">Fan, WiFi, Mosquito Net, Water, etc.</p>
+            </div>
+          </div>
+          <div class="relative h-64 sm:h-72 w-full flex items-center justify-center">
+            <canvas id="categoryChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- HOSTEL FILTER TABS & MANAGEMENT TABLE -->
+      <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm space-y-6">
+        
+        <!-- Filter Bar -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div>
+            <h3 class="text-xl font-extrabold text-slate-800">Hostel Complaints Management</h3>
+            <p class="text-xs text-slate-500">Filter by hostel block, update maintenance progress, or resolve and dispatch notifications.</p>
+          </div>
+
+          <!-- Hostel Selection Pills -->
+          <div class="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200/70 text-xs font-bold">
+            <button onclick="filterAdminHostel('ALL')" id="filterTabALL" class="admin-filter-pill active px-3.5 py-1.5 rounded-xl transition">
+              All Hostels
+            </button>
+            <button onclick="filterAdminHostel('Amethyst')" id="filterTabAmethyst" class="admin-filter-pill px-3.5 py-1.5 rounded-xl transition text-violet-700">
+              <i class="fa-solid fa-gem mr-1"></i>Amethyst
+            </button>
+            <button onclick="filterAdminHostel('Amber')" id="filterTabAmber" class="admin-filter-pill px-3.5 py-1.5 rounded-xl transition text-amber-700">
+              <i class="fa-solid fa-sun mr-1"></i>Amber
+            </button>
+            <button onclick="filterAdminHostel('Sapphire')" id="filterTabSapphire" class="admin-filter-pill px-3.5 py-1.5 rounded-xl transition text-sky-700">
+              <i class="fa-solid fa-water mr-1"></i>Sapphire
+            </button>
+            <button onclick="filterAdminHostel('Jasper')" id="filterTabJasper" class="admin-filter-pill px-3.5 py-1.5 rounded-xl transition text-rose-700">
+              <i class="fa-solid fa-fire mr-1"></i>Jasper
+            </button>
+          </div>
+        </div>
+
+        <!-- Search and Status Filter Row -->
+        <div class="flex flex-col sm:flex-row items-center gap-3">
+          <div class="relative flex-grow w-full">
+            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+              <i class="fa-solid fa-magnifying-glass"></i>
+            </span>
+            <input type="text" id="adminSearchInput" oninput="renderAdminIssues()" placeholder="Search resident, room no, issue keywords..."
+              class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white" />
+          </div>
+
+          <div class="flex items-center space-x-2 w-full sm:w-auto">
+            <select id="adminStatusFilter" onchange="renderAdminIssues()" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="ALL">All Statuses</option>
+              <option value="UNRESOLVED" selected>Active / Unresolved Only</option>
+              <option value="Pending">Pending Only</option>
+              <option value="In Progress">In Progress Only</option>
+              <option value="Resolved">Resolved Archive</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Issues Cards / Table List -->
+        <div id="adminIssuesList" class="space-y-4">
+          <!-- Dynamic admin issue cards injected via JS -->
+        </div>
+
+        <!-- Empty state -->
+        <div id="adminEmptyState" class="hidden text-center py-12">
+          <div class="w-14 h-14 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-xl">
+            <i class="fa-solid fa-filter"></i>
+          </div>
+          <h4 class="font-bold text-slate-700">No matching issues found</h4>
+          <p class="text-slate-400 text-xs">Try adjusting your hostel filter or search query.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============================================== -->
+  <!-- MODAL 1: ADD NEW ISSUE MODAL                   -->
+  <!-- ============================================== -->
+  <div id="newIssueModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-100 animate-fadeIn">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-wrench"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-extrabold text-slate-800">Raise Hostel Issue</h3>
+            <p class="text-xs text-slate-500">Fill in details for quick maintenance dispatch.</p>
+          </div>
+        </div>
+        <button onclick="closeNewIssueModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="newIssueForm" onsubmit="handleNewIssueSubmit(event)" class="space-y-4">
+        <!-- Category Selection -->
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Issue Category *</label>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <label class="category-radio flex items-center p-2.5 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition text-xs font-semibold text-slate-700">
+              <input type="radio" name="issueCategory" value="Fan / Electrical" checked class="mr-2 text-indigo-600" />
+              <span><i class="fa-solid fa-fan text-indigo-500 mr-1.5"></i>Fan / AC</span>
+            </label>
+            <label class="category-radio flex items-center p-2.5 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition text-xs font-semibold text-slate-700">
+              <input type="radio" name="issueCategory" value="WiFi / Internet" class="mr-2 text-indigo-600" />
+              <span><i class="fa-solid fa-wifi text-sky-500 mr-1.5"></i>WiFi / Net</span>
+            </label>
+            <label class="category-radio flex items-center p-2.5 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition text-xs font-semibold text-slate-700">
+              <input type="radio" name="issueCategory" value="Mosquito Net" class="mr-2 text-indigo-600" />
+              <span><i class="fa-solid fa-shield-virus text-emerald-500 mr-1.5"></i>Mosquito Net</span>
+            </label>
+            <label class="category-radio flex items-center p-2.5 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition text-xs font-semibold text-slate-700">
+              <input type="radio" name="issueCategory" value="Water Problem" class="mr-2 text-indigo-600" />
+              <span><i class="fa-solid fa-droplet text-blue-500 mr-1.5"></i>Water Issue</span>
+            </label>
+            <label class="category-radio flex items-center p-2.5 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition text-xs font-semibold text-slate-700">
+              <input type="radio" name="issueCategory" value="Carpentry / Furniture" class="mr-2 text-indigo-600" />
+              <span><i class="fa-solid fa-chair text-amber-500 mr-1.5"></i>Furniture</span>
+            </label>
+            <label class="category-radio flex items-center p-2.5 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition text-xs font-semibold text-slate-700">
+              <input type="radio" name="issueCategory" value="Cleanliness / Waste" class="mr-2 text-indigo-600" />
+              <span><i class="fa-solid fa-broom text-teal-500 mr-1.5"></i>Cleaning</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Issue Title -->
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Issue Title *</label>
+          <input type="text" id="issueTitle" required placeholder="e.g. Ceiling fan rotating very slowly / making loud noise"
+            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white" />
+        </div>
+
+        <!-- Room & Urgency Row -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Room No.</label>
+            <input type="text" id="issueRoom" required
+              class="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-600 font-semibold cursor-not-allowed" readonly />
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Priority</label>
+            <select id="issuePriority" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold">
+              <option value="Normal">Normal</option>
+              <option value="High">High</option>
+              <option value="Urgent">Urgent (Emergency)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Description Details -->
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Detailed Description *</label>
+          <textarea id="issueDescription" rows="3" required placeholder="Please describe the issue in detail so the technician brings the right tools..."
+            class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white"></textarea>
+        </div>
+
+        <!-- Submit Buttons -->
+        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeNewIssueModal()" class="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-xs hover:bg-slate-50">
+            Cancel
+          </button>
+          <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-200 flex items-center space-x-1.5">
+            <i class="fa-solid fa-paper-plane"></i>
+            <span>Submit Ticket</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL 2: RESOLUTION & EMAIL DISPATCH CONFIRM   -->
+  <!-- ============================================== -->
+  <div id="resolveModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-100 animate-fadeIn">
+      <div class="flex items-center space-x-3 pb-4 border-b border-slate-100 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg">
+          <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-extrabold text-slate-800">Resolve Issue & Dispatch Email</h3>
+          <p class="text-xs text-slate-500">Remove from active issues list and notify student automatically.</p>
+        </div>
+      </div>
+
+      <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2 mb-4 text-xs">
+        <div class="flex justify-between">
+          <span class="text-slate-500">Ticket ID:</span>
+          <span id="resolveTicketId" class="font-mono font-bold text-indigo-700">#---</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-500">Student:</span>
+          <span id="resolveStudentName" class="font-semibold text-slate-800">---</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-500">Student Email:</span>
+          <span id="resolveStudentEmail" class="font-semibold text-indigo-600 font-mono">---</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-500">Hostel & Room:</span>
+          <span id="resolveLocation" class="font-semibold text-slate-800">---</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-500">Pending Duration:</span>
+          <span id="resolveDaysPending" class="font-bold text-rose-600">---</span>
+        </div>
+      </div>
+
+      <form id="resolveForm" onsubmit="handleResolveSubmit(event)" class="space-y-4">
+        <input type="hidden" id="resolveIssueId" />
+        
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Resolution Remarks (Included in Email) *</label>
+          <textarea id="resolveNotes" rows="3" required placeholder="e.g. Electrician replaced the fan capacitor. The fan is now tested and functioning smoothly."
+            class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white"></textarea>
+        </div>
+
+        <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-start space-x-2">
+          <i class="fa-solid fa-envelope-circle-check text-emerald-600 text-sm mt-0.5"></i>
+          <div>
+            <strong>Instant Email Action:</strong> An official email notification will be dispatched to the resident's registered email with resolution summary.
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeResolveModal()" class="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-xs hover:bg-slate-50">
+            Cancel
+          </button>
+          <button type="submit" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-200 flex items-center space-x-2">
+            <i class="fa-solid fa-check-double"></i>
+            <span>Confirm Resolution & Send Email</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL 3: EMAIL OUTBOX / SENT LOGS MODAL         -->
+  <!-- ============================================== -->
+  <div id="emailModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-100 max-h-[90vh] flex flex-col animate-fadeIn">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-paper-plane"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-extrabold text-slate-800">Automated Email Outbox</h3>
+            <p class="text-xs text-slate-500">Live preview of notification emails dispatched to residents upon issue resolution.</p>
+          </div>
+        </div>
+        <button onclick="closeEmailOutboxModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Outbox List Container -->
+      <div id="emailLogContainer" class="flex-grow overflow-y-auto space-y-3 pr-1">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Empty state -->
+      <div id="emailEmptyState" class="hidden text-center py-12">
+        <div class="w-12 h-12 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-2 text-lg">
+          <i class="fa-regular fa-envelope-open"></i>
+        </div>
+        <p class="text-slate-600 font-semibold text-xs">No resolution emails sent yet.</p>
+        <p class="text-slate-400 text-[11px] mt-0.5">When an admin resolves an issue, the dispatched email record will appear here.</p>
+      </div>
+
+      <div class="pt-4 border-t border-slate-100 mt-4 flex justify-between items-center text-xs text-slate-500">
+        <span>SMTP Status: <span class="font-bold text-emerald-600">Simulated & Logged</span></span>
+        <button onclick="closeEmailOutboxModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL 4: MYSQL DATABASE CONFIGURATION          -->
+  <!-- ============================================== -->
+  <div id="dbModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 animate-fadeIn">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-database"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-extrabold text-slate-800">MySQL Connection</h3>
+            <p class="text-xs text-slate-500">HostelCare MySQL 8.0 Settings</p>
+          </div>
+        </div>
+        <button onclick="closeDbConfigModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="dbConfigForm" onsubmit="handleDbConfigSubmit(event)" class="space-y-4 text-xs">
+        <div class="grid grid-cols-3 gap-2">
+          <div class="col-span-2">
+            <label class="block font-bold uppercase tracking-wider text-slate-600 mb-1">Host</label>
+            <input type="text" id="cfgDbHost" required value="localhost" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+          <div>
+            <label class="block font-bold uppercase tracking-wider text-slate-600 mb-1">Port</label>
+            <input type="number" id="cfgDbPort" required value="3306" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold uppercase tracking-wider text-slate-600 mb-1">MySQL Username</label>
+          <input type="text" id="cfgDbUser" required value="root" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+
+        <div>
+          <label class="block font-bold uppercase tracking-wider text-slate-600 mb-1">MySQL Password</label>
+          <input type="password" id="cfgDbPassword" placeholder="Enter root password (if any)" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <p class="text-[11px] text-slate-400 mt-1">If your MySQL root has a password, enter it here. Stored in <code class="font-mono">db_config.json</code>.</p>
+        </div>
+
+        <div>
+          <label class="block font-bold uppercase tracking-wider text-slate-600 mb-1">Database Name</label>
+          <input type="text" id="cfgDbName" required value="hostelcare" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <p class="text-[11px] text-slate-400 mt-0.5">Will be created automatically if it does not exist.</p>
+        </div>
+
+        <div id="dbConfigStatusMsg" class="hidden p-3 rounded-xl text-xs font-semibold"></div>
+
+        <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeDbConfigModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-semibold text-xs hover:bg-slate-50">
+            Cancel
+          </button>
+          <button type="submit" id="btnSaveDbConfig" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-200 flex items-center space-x-1.5">
+            <i class="fa-solid fa-plug"></i>
+            <span>Test & Save Connection</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+  <!-- FOOTER -->
+  <footer class="mt-auto border-t border-slate-200 bg-white py-6 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div>
+        <span class="font-extrabold text-indigo-600">HostelCare System</span> &copy; 2026. Supporting Amethyst, Amber, Sapphire, & Jasper Hostels.
+      </div>
+      <div class="flex items-center space-x-4 text-slate-400">
+        <span><i class="fa-solid fa-server mr-1"></i>Status: Active</span>
+        <span><i class="fa-solid fa-shield-halved mr-1"></i>Campus Secure</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
