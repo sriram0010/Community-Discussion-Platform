@@ -266,10 +266,15 @@ def create_issue(data):
         conn.close()
 
 def update_issue_status(issue_id, new_status):
+    allowed_statuses = {"Pending", "In Progress", "Resolved"}
+    if new_status not in allowed_statuses:
+        raise ValueError("Invalid issue status.")
     conn = get_connection()
     try:
         with conn.cursor() as cur:
             cur.execute("UPDATE issues SET status = %s WHERE id = %s", (new_status, issue_id))
+            if cur.rowcount == 0:
+                raise ValueError("Issue not found.")
         conn.commit()
         return True
     finally:
@@ -288,6 +293,8 @@ def resolve_issue_and_create_email(issue_id, resolution_notes, resolved_by, emai
                     resolution_notes = %s
                 WHERE id = %s
             """, (resolved_by, resolution_notes, issue_id))
+            if cur.rowcount == 0:
+                raise ValueError("Issue not found.")
 
             # 2. Insert Email Log
             cur.execute("""
@@ -304,7 +311,9 @@ def resolve_issue_and_create_email(issue_id, resolution_notes, resolved_by, emai
                 email_data["category"],
                 email_data["subject"],
                 email_data["body"],
-                email_data.get("status", "Delivered")
+                # Keep this value safely within the existing VARCHAR(50) column
+                # even if a caller supplies an unexpected status string.
+                str(email_data.get("status", "Delivered"))[:50]
             ))
         conn.commit()
         return True

@@ -1022,7 +1022,8 @@ async function handleResolveSubmit(e) {
 async function checkEmailConfig() {
   const statusText = document.getElementById('smtpGatewayStatusText');
   try {
-    const res = await fetch('/api/config/email');
+    const res = await fetch('/api/config/email', { cache: 'no-store' });
+    if (!res.ok) throw new Error(`SMTP status request failed (${res.status})`);
     const data = await res.json();
     if (statusText) {
       if (data.configured) {
@@ -1036,12 +1037,14 @@ async function checkEmailConfig() {
     if (data.smtp_user && document.getElementById('cfgSmtpUser')) document.getElementById('cfgSmtpUser').value = data.smtp_user;
     if (data.from_name && document.getElementById('cfgSmtpFromName')) document.getElementById('cfgSmtpFromName').value = data.from_name;
   } catch (err) {
-    if (statusText) statusText.textContent = 'Offline';
+    if (statusText) {
+      statusText.innerHTML = '<span class="text-rose-600 font-semibold"><i class="fa-solid fa-circle-exclamation mr-1"></i>Unavailable</span>';
+      statusText.title = 'Could not contact the SMTP configuration endpoint. Refresh the page after the server is online.';
+    }
   }
 }
 
 function openEmailConfigModal() {
-  checkEmailConfig();
   const modal = document.getElementById('emailConfigModal');
   const msgEl = document.getElementById('emailConfigStatusMsg');
   if (msgEl) msgEl.classList.add('hidden');
@@ -1049,6 +1052,9 @@ function openEmailConfigModal() {
     modal.classList.remove('hidden');
     modal.classList.add('flex');
   }
+  // Fetch after opening so the user immediately sees the form, even while a
+  // deployed service is waking up or its configuration request is delayed.
+  checkEmailConfig();
 }
 
 function closeEmailConfigModal() {
@@ -1166,7 +1172,7 @@ async function renderEmailLogs() {
         <div class="font-bold text-slate-700 text-sm">${escapeHtml(email.subject)}</div>
         <div class="bg-white p-3 rounded-xl border border-slate-200 whitespace-pre-wrap font-sans text-slate-600 leading-relaxed">${escapeHtml(email.body)}</div>
         <div class="flex items-center justify-between text-[11px] text-slate-400 pt-1">
-          <span>Delivery: <strong class="text-emerald-600">Dispatched via SMTP & Logged in MySQL</strong></span>
+          <span>Delivery: <strong class="${email.status === 'Delivered' ? 'text-emerald-600' : 'text-amber-600'}">${escapeHtml(email.status || 'Logged')}</strong></span>
           <span>Linked Ticket: <strong class="font-mono text-indigo-600">#${email.issueId}</strong></span>
         </div>
       `;

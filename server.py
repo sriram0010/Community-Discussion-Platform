@@ -31,6 +31,7 @@ class HostelCareHandler(SimpleHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
@@ -274,8 +275,13 @@ class HostelCareHandler(SimpleHTTPRequestHandler):
                 resolved_by=resolved_by
             )
 
-            # Record actual delivery status in MySQL emails table
-            email_data["status"] = delivery_msg
+            # `emails.status` is a short database state (VARCHAR(50)), not a
+            # diagnostic field.  SMTP messages include recipient addresses and
+            # provider errors, so they routinely exceed that limit.  Storing the
+            # full message caused the transaction to roll back, leaving tickets
+            # unresolved.  Return that detail to the UI, but persist a stable
+            # short value in MySQL.
+            email_data["status"] = "Delivered" if sent_ok else "Delivery failed"
 
             try:
                 db.resolve_issue_and_create_email(issue_id, notes, resolved_by, email_data)
