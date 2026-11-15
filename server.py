@@ -13,6 +13,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import db
+import email_service
 
 ROOT_DIR = Path(__file__).resolve().parent
 PORT = int(os.environ.get("PORT", 8000))
@@ -75,6 +76,20 @@ class HostelCareHandler(SimpleHTTPRequestHandler):
                 }
             }
             self.send_json(HTTPStatus.OK, db_status)
+            return
+
+        # 1b. Email Service Config & Status
+        if path == "/api/config/email":
+            cfg = email_service.load_email_config()
+            self.send_json(HTTPStatus.OK, {
+                "configured": email_service.is_smtp_configured(),
+                "smtp_host": cfg.get("smtp_host"),
+                "smtp_port": cfg.get("smtp_port"),
+                "smtp_user": cfg.get("smtp_user"),
+                "from_name": cfg.get("from_name"),
+                "from_email": cfg.get("from_email"),
+                "hasPassword": bool(cfg.get("smtp_password"))
+            })
             return
 
         # 2. Issues API
@@ -140,6 +155,27 @@ class HostelCareHandler(SimpleHTTPRequestHandler):
                     "success": False,
                     "error": f"Failed to connect to MySQL: {msg}"
                 })
+            return
+
+        # 1b. Update & Test Email (SMTP) Configuration
+        if path == "/api/config/email":
+            cfg = email_service.load_email_config()
+            if "smtp_host" in body: cfg["smtp_host"] = body["smtp_host"].strip()
+            if "smtp_port" in body: cfg["smtp_port"] = int(body["smtp_port"])
+            if "smtp_user" in body: cfg["smtp_user"] = body["smtp_user"].strip()
+            if "smtp_password" in body and body["smtp_password"]: cfg["smtp_password"] = body["smtp_password"].strip()
+            if "from_name" in body: cfg["from_name"] = body["from_name"].strip()
+            if "from_email" in body: cfg["from_email"] = body["from_email"].strip()
+
+            email_service.save_email_config(cfg)
+
+            test_target = body.get("testEmail")
+            tested, test_msg = email_service.test_smtp_connection(test_email=test_target)
+            self.send_json(HTTPStatus.OK, {
+                "success": tested,
+                "message": test_msg,
+                "configured": email_service.is_smtp_configured()
+            })
             return
 
         # 2. Student Registration
@@ -212,11 +248,42 @@ class HostelCareHandler(SimpleHTTPRequestHandler):
             notes = body.get("resolutionNotes", "")
             resolved_by = body.get("resolvedBy", "Hostel Admin")
             email_data = body.get("emailData", {})
+
+            # Extract student details for real email delivery
+            recipient_email = email_data.get("recipientEmail", "").strip()
+            recipient_name = email_data.get("recipientName", "Resident")
+            reg_no = email_data.get("regNo", "")
+            hostel = email_data.get("hostel", "")
+            room_no = email_data.get("roomNo", "")
+            category = email_data.get("category", "")
+            title = email_data.get("title", "")
+            if not title and "subject" in email_data:
+                title = email_data["subject"].split(": ", 1)[-1] if ": " in email_data["subject"] else email_data["subject"]
+
+            # Dispatch real email via SMTP
+            sent_ok, delivery_msg = email_service.send_resolution_email(
+                recipient_email=recipient_email,
+                recipient_name=recipient_name,
+                reg_no=reg_no,
+                hostel=hostel,
+                room_no=room_no,
+                ticket_id=issue_id,
+                category=category,
+                title=title,
+                resolution_notes=notes,
+                resolved_by=resolved_by
+            )
+
+            # Record actual delivery status in MySQL emails table
+            email_data["status"] = delivery_msg
+
             try:
                 db.resolve_issue_and_create_email(issue_id, notes, resolved_by, email_data)
                 self.send_json(HTTPStatus.OK, {
                     "success": True,
-                    "message": f"Issue #{issue_id} resolved and email dispatched."
+                    "message": f"Issue #{issue_id} resolved! {delivery_msg}",
+                    "emailSent": sent_ok,
+                    "emailStatus": delivery_msg
                 })
             except Exception as e:
                 self.send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(e)})

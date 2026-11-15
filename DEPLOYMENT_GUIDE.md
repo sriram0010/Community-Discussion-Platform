@@ -75,14 +75,53 @@ git push -u origin main
    - **Start Command**: `python server.py`
    - **Instance Type**: **Free**
 5. Scroll down to **"Environment Variables"** and add:
-   - **Key**: `DATABASE_URL`
-   - **Value**: Your cloud connection string from Part 1:
+   - **`DATABASE_URL`**: Your cloud connection string from Part 1:
      `mysql://<USER>:<PASSWORD>@<HOST>:4000/hostelcare?ssl_verify_cert=true`
+   - *(Optional for Live Real Emails)*:
+     - **`SMTP_HOST`**: `smtp.gmail.com` (or `smtp-relay.brevo.com`)
+     - **`SMTP_PORT`**: `587`
+     - **`SMTP_USER`**: Your Gmail / Brevo address (e.g. `hostelwarden@gmail.com`)
+     - **`SMTP_PASSWORD`**: Your 16-character [Google App Password](https://myaccount.google.com/apppasswords)
+     - **`SMTP_FROM_NAME`**: `HostelCare Administration`
 6. Click **"Deploy Web Service"**.
 7. In about 60 seconds, your site will be live at:
-   👉 **`https://hostelcare.onrender.com`** *(or your chosen name)*.
+   👉 **`https://hostelcare.onrender.com`** *(or your chosen custom service name)*.
 
 ---
+
+## 🔄 PART 3: How to Reflect Modifications in Git & Cloud Deployment
+
+Whenever you make any changes to your code, follow this simple 3-step workflow to push your updates so your cloud server redeploys automatically:
+
+```mermaid
+flowchart LR
+    A["1. Local Code Changes\n(HostelCare Workspace)"] -->|git add & commit| B["2. Git Commit"]
+    B -->|git push origin main| C["3. GitHub Repository"]
+    C -->|Auto Webhook Trigger| D["4. Cloud Server (Render)\nAuto-Build & Live Update"]
+```
+
+### 1. Check your modified files:
+```powershell
+git status
+```
+
+### 2. Stage and commit your changes:
+```powershell
+git add .
+git commit -m "feat: real email sent to resident when hostel issue is sorted out"
+```
+
+### 3. Push to GitHub:
+```powershell
+git push origin main
+```
+
+### 4. Automatic Cloud Redeployment:
+- If you have connected your GitHub repository to **Render** (or Koyeb/Vercel):
+  - Render will **automatically detect the new commit** on the `main` branch.
+  - It triggers a fresh build (`pip install -r requirements.txt`) and restarts `python server.py`.
+  - Your updated live website is refreshed in **under 60 seconds with zero downtime**!
+- You can watch the live build progress anytime in your **Render Dashboard ➔ Events / Logs**.
 
 ## 💡 ALTERNATIVE OPTION: All-in-One on **PythonAnywhere**
 If you prefer having both the **Python Web Server** and the **MySQL Database** inside a single platform:

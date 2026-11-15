@@ -29,6 +29,7 @@ let appState = {
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
   checkDbHealth();
+  checkEmailConfig();
   checkSession();
   updateCalculatedUsername();
 });
@@ -976,6 +977,7 @@ async function handleResolveSubmit(e) {
     hostel: issue.hostel,
     roomNo: issue.roomNo,
     category: issue.category,
+    title: issue.title,
     subject: `[Resolved] Hostel Maintenance Ticket #${issue.id}: ${issue.title}`,
     body: `Dear ${issue.studentName},\n\nWe are pleased to inform you that your reported issue has been successfully RESOLVED by the facilities team.\n\nTicket Summary:\n- Ticket ID: #${issue.id}\n- Hostel: ${issue.hostel} | Room: ${issue.roomNo}\n- Category: ${issue.category}\n- Issue: ${issue.title}\n\nResolution Remarks from Warden Office:\n"${resolutionNotes}"\n\nThe issue has now been removed from the active maintenance list. If you continue experiencing any trouble, please feel free to raise a new request on HostelCare.\n\nWarm regards,\nHostel Management Office\nAmethyst, Amber, Sapphire & Jasper Facilities`,
     status: 'Delivered'
@@ -1000,7 +1002,12 @@ async function handleResolveSubmit(e) {
 
     closeResolveModal();
     updateEmailBadge();
-    showToast(`Ticket #${issue.id} marked as Resolved in MySQL! Email dispatched to ${issue.studentEmail}.`, 'success');
+
+    const toastMsg = result.emailSent 
+      ? `Ticket #${issue.id} sorted out! Live email delivered to ${issue.studentEmail}`
+      : `Ticket #${issue.id} marked as Resolved! (${result.emailStatus || 'Recorded in MySQL'})`;
+    showToast(toastMsg, result.emailSent ? 'success' : 'info');
+
     renderAdminDashboard();
 
     setTimeout(() => {
@@ -1008,6 +1015,96 @@ async function handleResolveSubmit(e) {
     }, 400);
   } catch (err) {
     showToast(`Failed to resolve issue: ${err.message}`, 'warning');
+  }
+}
+
+// --- EMAIL CONFIGURATION (SMTP) HANDLERS ---
+async function checkEmailConfig() {
+  const statusText = document.getElementById('smtpGatewayStatusText');
+  try {
+    const res = await fetch('/api/config/email');
+    const data = await res.json();
+    if (statusText) {
+      if (data.configured) {
+        statusText.innerHTML = `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-circle-check mr-1"></i>Active (${escapeHtml(data.smtp_user || data.smtp_host)})</span>`;
+      } else {
+        statusText.innerHTML = `<span class="text-amber-600 font-semibold"><i class="fa-solid fa-circle-info mr-1"></i>Not configured (Click to set)</span>`;
+      }
+    }
+    if (data.smtp_host && document.getElementById('cfgSmtpHost')) document.getElementById('cfgSmtpHost').value = data.smtp_host;
+    if (data.smtp_port && document.getElementById('cfgSmtpPort')) document.getElementById('cfgSmtpPort').value = data.smtp_port;
+    if (data.smtp_user && document.getElementById('cfgSmtpUser')) document.getElementById('cfgSmtpUser').value = data.smtp_user;
+    if (data.from_name && document.getElementById('cfgSmtpFromName')) document.getElementById('cfgSmtpFromName').value = data.from_name;
+  } catch (err) {
+    if (statusText) statusText.textContent = 'Offline';
+  }
+}
+
+function openEmailConfigModal() {
+  checkEmailConfig();
+  const modal = document.getElementById('emailConfigModal');
+  const msgEl = document.getElementById('emailConfigStatusMsg');
+  if (msgEl) msgEl.classList.add('hidden');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+}
+
+function closeEmailConfigModal() {
+  const modal = document.getElementById('emailConfigModal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+}
+
+async function handleEmailConfigSubmit(e) {
+  e.preventDefault();
+  const msgEl = document.getElementById('emailConfigStatusMsg');
+  const btn = document.getElementById('btnSaveEmailConfig');
+  const originalText = btn.innerHTML;
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Testing SMTP...';
+  msgEl.classList.add('hidden');
+
+  const payload = {
+    smtp_host: document.getElementById('cfgSmtpHost').value.trim(),
+    smtp_port: parseInt(document.getElementById('cfgSmtpPort').value.trim()) || 587,
+    smtp_user: document.getElementById('cfgSmtpUser').value.trim(),
+    smtp_password: document.getElementById('cfgSmtpPassword').value,
+    from_name: document.getElementById('cfgSmtpFromName').value.trim(),
+    testEmail: document.getElementById('cfgSmtpTestEmail').value.trim()
+  };
+
+  try {
+    const res = await fetch('/api/config/email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const result = await res.json();
+
+    if (result.success) {
+      msgEl.className = 'p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold';
+      msgEl.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600 mr-1.5"></i> ${result.message}`;
+      msgEl.classList.remove('hidden');
+      showToast('SMTP credentials saved! Real emails enabled.', 'success');
+      checkEmailConfig();
+      setTimeout(closeEmailConfigModal, 1500);
+    } else {
+      msgEl.className = 'p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold';
+      msgEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-600 mr-1.5"></i> ${result.message}`;
+      msgEl.classList.remove('hidden');
+    }
+  } catch (err) {
+    msgEl.className = 'p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold';
+    msgEl.innerHTML = `<i class="fa-solid fa-circle-exclamation text-rose-600 mr-1.5"></i> ${err.message}`;
+    msgEl.classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalText;
   }
 }
 
@@ -1028,6 +1125,7 @@ async function updateEmailBadge() {
 
 async function openEmailOutboxModal() {
   await renderEmailLogs();
+  checkEmailConfig();
   document.getElementById('emailModal').classList.remove('hidden');
   document.getElementById('emailModal').classList.add('flex');
 }

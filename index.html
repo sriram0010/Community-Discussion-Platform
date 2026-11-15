@@ -810,10 +810,83 @@
         <p class="text-slate-400 text-[11px] mt-0.5">When an admin resolves an issue, the dispatched email record will appear here.</p>
       </div>
 
-      <div class="pt-4 border-t border-slate-100 mt-4 flex justify-between items-center text-xs text-slate-500">
-        <span>SMTP Status: <span class="font-bold text-emerald-600">Simulated & Logged</span></span>
+      <div class="pt-4 border-t border-slate-100 mt-4 flex flex-wrap justify-between items-center text-xs text-slate-500 gap-2">
+        <div class="flex items-center space-x-2">
+          <span>SMTP Gateway: <span id="smtpGatewayStatusText" class="font-bold text-slate-700">Checking...</span></span>
+          <button onclick="openEmailConfigModal()" class="text-indigo-600 hover:text-indigo-800 font-bold underline ml-1">
+            <i class="fa-solid fa-gear mr-1"></i>Configure SMTP
+          </button>
+        </div>
         <button onclick="closeEmailOutboxModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl">Close</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL 5: REAL EMAIL (SMTP) CONFIGURATION       -->
+  <!-- ============================================== -->
+  <div id="emailConfigModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 animate-fadeIn">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-paper-plane"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-extrabold text-slate-800">Email (SMTP) Settings</h3>
+            <p class="text-xs text-slate-500">Send real resolution emails to residents</p>
+          </div>
+        </div>
+        <button onclick="closeEmailConfigModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="emailConfigForm" onsubmit="handleEmailConfigSubmit(event)" class="space-y-4 text-xs">
+        <div class="grid grid-cols-3 gap-2">
+          <div class="col-span-2">
+            <label class="block font-bold uppercase tracking-wider text-slate-600 mb-1">SMTP Host</label>
+            <input type="text" id="cfgSmtpHost" required value="smtp.gmail.com" placeholder="e.g. smtp.gmail.com" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500" />
+          </div>
+          <div>
+            <label class="block font-bold uppercase tracking-wider text-slate-600 mb-1">Port</label>
+            <input type="number" id="cfgSmtpPort" required value="587" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold uppercase tracking-wider text-slate-600 mb-1">Sender Email / Username</label>
+          <input type="email" id="cfgSmtpUser" required placeholder="e.g. hostelwarden@gmail.com" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500" />
+        </div>
+
+        <div>
+          <label class="block font-bold uppercase tracking-wider text-slate-600 mb-1">SMTP Password / App Password</label>
+          <input type="password" id="cfgSmtpPassword" placeholder="e.g. 16-character Google App Password" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500" />
+          <p class="text-[11px] text-slate-400 mt-1">For Gmail: Create a free App Password at <a href="https://myaccount.google.com/apppasswords" target="_blank" class="text-purple-600 underline">Google Account ➔ App Passwords</a>.</p>
+        </div>
+
+        <div>
+          <label class="block font-bold uppercase tracking-wider text-slate-600 mb-1">Sender Name</label>
+          <input type="text" id="cfgSmtpFromName" value="HostelCare Administration" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500" />
+        </div>
+
+        <div>
+          <label class="block font-bold uppercase tracking-wider text-slate-600 mb-1">Send Verification Test Email To (Optional)</label>
+          <input type="email" id="cfgSmtpTestEmail" placeholder="your_email@gmail.com" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500" />
+        </div>
+
+        <div id="emailConfigStatusMsg" class="hidden p-3 rounded-xl text-xs font-semibold"></div>
+
+        <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeEmailConfigModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-semibold text-xs hover:bg-slate-50">
+            Cancel
+          </button>
+          <button type="submit" id="btnSaveEmailConfig" class="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-md shadow-purple-200 flex items-center space-x-1.5">
+            <i class="fa-solid fa-paper-plane"></i>
+            <span>Test & Save Email Settings</span>
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 
