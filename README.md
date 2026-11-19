@@ -36,8 +36,10 @@ Alternatively, you can edit [db_config.json](file:///d:/vscodee/hostel/db_config
 ---
 
 ## 🚀 Live Access
-The backend server is running live at:
-👉 **[http://localhost:8000](http://localhost:8000)**
+The deployed HostelCare website is live at:
+👉 **[https://hostelcare-m1nn.onrender.com/](https://hostelcare-m1nn.onrender.com/)**
+
+For local development only, run the server and open `http://localhost:8000`.
 
 
 ---
