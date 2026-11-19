@@ -22,6 +22,7 @@ let appState = {
   emails: [],
   dbConnected: false,
   adminSelectedHostel: 'ALL',
+  chartMonth: 'ALL',
   hostelsChartInstance: null,
   categoryChartInstance: null
 };
@@ -656,8 +657,12 @@ function filterAdminHostel(hostelName) {
 
 async function renderAdminMetricsAndCharts() {
   try {
-    const res = await fetch('/api/stats');
-    const stats = await res.json();
+    const [statsRes, issuesRes] = await Promise.all([
+      fetch('/api/stats'),
+      fetch('/api/issues')
+    ]);
+    const stats = await statsRes.json();
+    const chartIssues = await issuesRes.json();
 
     // Metrics
     const statusCounts = stats.statusCounts || {};
@@ -665,21 +670,34 @@ async function renderAdminMetricsAndCharts() {
     document.getElementById('adminStatInProgress').textContent = statusCounts['In Progress'] || 0;
     document.getElementById('adminStatResolved').textContent = statusCounts['Resolved'] || 0;
 
+    // Hostels Bar Chart. Its month filter uses the date each issue was raised.
+    const monthFilter = document.getElementById('hostelsChartMonthFilter');
+    const availableMonths = [...new Set(chartIssues
+      .filter(issue => issue.createdAt && !Number.isNaN(new Date(issue.createdAt).getTime()))
+      .map(issue => String(issue.createdAt).slice(0, 7)))]
+      .sort()
+      .reverse();
+    if (monthFilter) {
+      monthFilter.innerHTML = '<option value="ALL">All months</option>' + availableMonths.map(month => {
+        const label = new Date(`${month}-01T00:00:00`).toLocaleString(undefined, { month: 'long', year: 'numeric' });
+        return `<option value="${month}">${label}</option>`;
+      }).join('');
+      if (appState.chartMonth !== 'ALL' && !availableMonths.includes(appState.chartMonth)) {
+        appState.chartMonth = 'ALL';
+      }
+      monthFilter.value = appState.chartMonth;
+    }
+
+    const issuesForSelectedMonth = appState.chartMonth === 'ALL'
+      ? chartIssues
+      : chartIssues.filter(issue => issue.createdAt && String(issue.createdAt).slice(0, 7) === appState.chartMonth);
+
     // Hostels Bar Chart
     const hostels = ['Amethyst', 'Amber', 'Sapphire', 'Jasper'];
-    const hostelMap = {};
-    (stats.hostelStats || []).forEach(row => {
-      hostelMap[row.hostel.toLowerCase()] = row;
-    });
-
-    const pendingByHostel = hostels.map(h => {
-      const match = hostelMap[h.toLowerCase()];
-      return match ? parseInt(match.active_cnt || 0) : 0;
-    });
-    const resolvedByHostel = hostels.map(h => {
-      const match = hostelMap[h.toLowerCase()];
-      return match ? parseInt(match.resolved_cnt || 0) : 0;
-    });
+    const pendingByHostel = hostels.map(hostel => issuesForSelectedMonth.filter(issue =>
+      issue.hostel === hostel && issue.status !== 'Resolved').length);
+    const resolvedByHostel = hostels.map(hostel => issuesForSelectedMonth.filter(issue =>
+      issue.hostel === hostel && issue.status === 'Resolved').length);
 
     const ctxHostels = document.getElementById('hostelsChart');
     if (ctxHostels) {
@@ -767,12 +785,18 @@ async function renderAdminMetricsAndCharts() {
   }
 }
 
+function setHostelsChartMonth(month) {
+  appState.chartMonth = month || 'ALL';
+  renderAdminMetricsAndCharts();
+}
+
 // Render Admin Issues List (MySQL Powered)
 async function renderAdminIssues() {
   const container = document.getElementById('adminIssuesList');
   const emptyEl = document.getElementById('adminEmptyState');
   const searchVal = (document.getElementById('adminSearchInput')?.value || '').toLowerCase().trim();
   const statusFilter = document.getElementById('adminStatusFilter')?.value || 'UNRESOLVED';
+  const sortOrder = document.getElementById('adminIssueSort')?.value || 'days-desc';
 
   try {
     let url = '/api/issues?';
@@ -802,6 +826,14 @@ async function renderAdminIssues() {
       }
       return true;
     });
+
+    if (sortOrder === 'days-desc') {
+      filtered.sort((a, b) => {
+        const bDays = calculateDaysUnresolved(b.createdAt, b.resolvedAt).days;
+        const aDays = calculateDaysUnresolved(a.createdAt, a.resolvedAt).days;
+        return bDays - aDays || new Date(a.createdAt) - new Date(b.createdAt);
+      });
+    }
 
     container.innerHTML = '';
 
