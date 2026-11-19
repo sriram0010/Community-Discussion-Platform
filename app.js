@@ -796,7 +796,7 @@ async function renderAdminIssues() {
   const emptyEl = document.getElementById('adminEmptyState');
   const searchVal = (document.getElementById('adminSearchInput')?.value || '').toLowerCase().trim();
   const statusFilter = document.getElementById('adminStatusFilter')?.value || 'UNRESOLVED';
-  const sortOrder = document.getElementById('adminIssueSort')?.value || 'days-desc';
+  const sortOrder = document.getElementById('adminIssueSort')?.value || 'latest';
 
   try {
     let url = '/api/issues?';
@@ -833,6 +833,9 @@ async function renderAdminIssues() {
         const aDays = calculateDaysUnresolved(a.createdAt, a.resolvedAt).days;
         return bDays - aDays || new Date(a.createdAt) - new Date(b.createdAt);
       });
+    } else {
+      // Default: the latest submitted complaint is shown first.
+      filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
 
     container.innerHTML = '';
