@@ -129,3 +129,48 @@
   color: #9f1239;
   border: 1px solid #fda4af;
 }
+
+/* Image-backed entry and dashboard banners. The dark overlays preserve text
+   contrast while letting each hostel have a distinct visual identity. */
+.auth-login-hero {
+  background-color: #312e81;
+  background-image:
+    linear-gradient(90deg, rgba(30, 27, 75, 0.70), rgba(76, 29, 149, 0.64)),
+    url('asset/login1.jpg'),
+    url('asset/login2.jpg');
+  background-position: center, left center, right center;
+  background-repeat: no-repeat;
+  background-size: cover, 50% 100%, 50% 100%;
+}
+
+.student-hostel-hero,
+.admin-hero {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.student-hostel-hero {
+  background-color: #1e1b4b;
+}
+
+.hostel-theme-amethyst {
+  background-image: linear-gradient(rgba(46, 16, 101, 0.76), rgba(30, 41, 59, 0.78)), url('asset/amethyst.jpg');
+}
+
+.hostel-theme-amber {
+  background-image: linear-gradient(rgba(120, 53, 15, 0.76), rgba(67, 20, 7, 0.78)), url('asset/amber.jpg');
+}
+
+.hostel-theme-sapphire {
+  background-image: linear-gradient(rgba(7, 89, 133, 0.76), rgba(15, 23, 42, 0.80)), url('asset/sapphire.jpg');
+}
+
+.hostel-theme-jasper {
+  background-image: linear-gradient(rgba(136, 19, 55, 0.76), rgba(69, 10, 10, 0.80)), url('asset/jasper.jpg');
+}
+
+.admin-hero {
+  background-color: #0f172a;
+  background-image: linear-gradient(rgba(15, 23, 42, 0.80), rgba(15, 23, 42, 0.84)), url('asset/admin.jpg');
+}

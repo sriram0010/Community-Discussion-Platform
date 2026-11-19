@@ -405,6 +405,15 @@ function renderAppForUser(user) {
 // STUDENT DASHBOARD LOGIC (MySQL Powered)
 // ==============================================================
 async function renderStudentDashboard(user) {
+  const hero = document.getElementById('studentWelcomeHero');
+  if (hero) {
+    const hostelClasses = ['hostel-theme-amethyst', 'hostel-theme-amber', 'hostel-theme-sapphire', 'hostel-theme-jasper'];
+    const hostelTheme = String(user.hostel || '').toLowerCase();
+    hero.classList.remove(...hostelClasses);
+    if (hostelClasses.includes(`hostel-theme-${hostelTheme}`)) {
+      hero.classList.add(`hostel-theme-${hostelTheme}`);
+    }
+  }
   document.getElementById('studentWelcomeName').textContent = user.name;
   document.getElementById('studentWelcomeRoom').textContent = user.roomNo;
   document.getElementById('studentWelcomeHostel').textContent = user.hostel;
