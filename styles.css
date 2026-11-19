@@ -132,25 +132,16 @@
 
 /* Image-backed entry and dashboard banners. The dark overlays preserve text
    contrast while letting each hostel have a distinct visual identity. */
-.auth-page-background {
-  width: 100vw;
-  min-height: calc(100vh - 8rem);
-  margin: 0 calc(50% - 50vw);
-  padding: clamp(2rem, 6vw, 5rem) max(1rem, calc((100vw - 42rem) / 2));
-  display: flex;
-  align-items: center;
+.login-page-active {
   background-color: #312e81;
   background-image:
-    linear-gradient(90deg, rgba(30, 27, 75, 0.34), rgba(76, 29, 149, 0.30)),
+    linear-gradient(90deg, rgba(30, 27, 75, 0.30), rgba(76, 29, 149, 0.28)),
     url('asset/login1.jpg'),
     url('asset/login2.jpg');
   background-position: center, left center, right center;
   background-repeat: no-repeat;
   background-size: cover, 50% 100%, 50% 100%;
-}
-
-.auth-login-card {
-  width: 100%;
+  background-attachment: fixed;
 }
 
 .auth-login-hero {
@@ -159,9 +150,24 @@
 
 .student-hostel-hero,
 .admin-hero {
+  isolation: isolate;
   background-position: center;
   background-repeat: no-repeat;
   background-size: cover;
+}
+
+.student-hostel-hero::before,
+.admin-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: rgba(15, 23, 42, 0.68);
+}
+
+.admin-hero > div {
+  position: relative;
+  z-index: 1;
 }
 
 .student-hostel-hero {
@@ -169,22 +175,22 @@
 }
 
 .hostel-theme-amethyst {
-  background-image: linear-gradient(rgba(46, 16, 101, 0.48), rgba(30, 41, 59, 0.54)), url('asset/amethyst.jpg');
+  background-image: url('asset/amethyst.jpg');
 }
 
 .hostel-theme-amber {
-  background-image: linear-gradient(rgba(120, 53, 15, 0.46), rgba(67, 20, 7, 0.54)), url('asset/amber.jpg');
+  background-image: url('asset/amber.jpg');
 }
 
 .hostel-theme-sapphire {
-  background-image: linear-gradient(rgba(7, 89, 133, 0.46), rgba(15, 23, 42, 0.56)), url('asset/sapphire.jpg');
+  background-image: url('asset/sapphire.jpg');
 }
 
 .hostel-theme-jasper {
-  background-image: linear-gradient(rgba(136, 19, 55, 0.46), rgba(69, 10, 10, 0.56)), url('asset/jasper.jpg');
+  background-image: url('asset/jasper.jpg');
 }
 
 .admin-hero {
   background-color: #0f172a;
-  background-image: linear-gradient(rgba(15, 23, 42, 0.56), rgba(15, 23, 42, 0.62)), url('asset/admin.jpg');
+  background-image: url('asset/admin.jpg');
 }

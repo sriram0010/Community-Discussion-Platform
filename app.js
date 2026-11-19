@@ -368,6 +368,7 @@ function handleLogout() {
 
 // Show Auth View
 function showAuthView() {
+  document.body.classList.add('login-page-active');
   document.getElementById('authView').classList.remove('hidden');
   document.getElementById('studentDashboard').classList.add('hidden');
   document.getElementById('adminDashboard').classList.add('hidden');
@@ -378,6 +379,7 @@ function showAuthView() {
 
 // Route to Dashboard based on Role
 function renderAppForUser(user) {
+  document.body.classList.remove('login-page-active');
   document.getElementById('authView').classList.add('hidden');
   document.getElementById('navGuestSection').classList.add('hidden');
   document.getElementById('navUserSection').classList.remove('hidden');
