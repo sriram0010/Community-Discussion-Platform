@@ -1,6 +1,7 @@
 # 🏨 HostelCare - Resident Issue Management System (MySQL Connected)
 
 A web application designed for hostel residents and administrators to report, monitor, and resolve hostel maintenance issues (fan/AC, WiFi, mosquito netting, water problems, electrical, plumbing, carpentry, and cleanliness), **backed directly by a MySQL database**.
+Web Service in Render has to be resumed for working of this website, currently it is turned off.
 
 ---
 
